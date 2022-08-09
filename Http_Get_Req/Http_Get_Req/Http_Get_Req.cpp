@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
 
 	HINTERNET hHttpRequest = HttpOpenRequest(hConnect, "GET", "/", NULL, NULL, NULL, INTERNET_FLAG_SECURE, 0);
 
-	while (!HttpSendRequest(hHttpRequest, NULL, 0, 0, 0))
+	if (!HttpSendRequest(hHttpRequest, NULL, 0, 0, 0))
 	{
 		cout << "Err sending Http Request error : " << GetLastError() << endl;;
 	}
@@ -46,6 +46,7 @@ int main(int argc, char* argv[])
 		if (!bReadStream)
 		{
 			cout << "InternetReadFile error : " << GetLastError() << endl;
+			break;
 		}
 		else
 		{
