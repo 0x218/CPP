@@ -23,7 +23,8 @@ int main(int argc, char* argv[])
 
 	if (!HttpSendRequest(hHttpRequest, NULL, 0, 0, 0))
 	{
-		cout << "Err sending Http Request error : " << GetLastError() << endl;;
+		cout << "Err sending Http Request error : " << GetLastError() << endl;
+		return -1;
 	}
 
 	DWORD dwFileSize = 1024;
@@ -46,7 +47,7 @@ int main(int argc, char* argv[])
 		if (!bReadStream)
 		{
 			cout << "InternetReadFile error : " << GetLastError() << endl;
-			break;
+			return -2;
 		}
 		else
 		{
