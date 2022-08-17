@@ -1,6 +1,5 @@
 // MoveMousePointer.cpp
 // A fun Win32 console program.
-// Keep your workstation active when you are away.
 // Hide console window and move mouse pointer at random postion.
 
 #include <iostream>
