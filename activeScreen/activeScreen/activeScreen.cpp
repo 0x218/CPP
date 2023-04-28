@@ -3,8 +3,12 @@
 
 #include <iostream>
 #include <Windows.h>
+#include <shlobj.h>
+#include <fstream>
 #include <random>
 #include <thread>
+
+std::string alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,;'\"!@#$%^&*(){}[]\|~`?><-_+= ";
 
 void MoveMouseandLeftClick(bool leftClick, int iSleep) {
 	double screenWidth = ::GetSystemMetrics(SM_CXSCREEN) - 1;
@@ -31,44 +35,47 @@ void MoveMouseandLeftClick(bool leftClick, int iSleep) {
 }
 
 
-char alphabet[67] = { 'a', 'b', 'c', 'd', 'e', 'f', 'g',
-							'h', 'i', 'j', 'k', 'l', 'm', 'n',
-							'o', 'p', 'q', 'r', 's', 't', 'u',
-							'v', 'w', 'x', 'y', 'z', 'A', 'B',
-							'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
-							'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R',
-							'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-							'0', '1', '2', '3', '4', '5', '6', '7',
-							'8', '9', ',', ';', ' '
-};
+void CreateOrOpenNotepadFile() {
+	//creates a notepad file in desktop.
+	TCHAR filePath[MAX_PATH];
+	HRESULT hr = SHGetFolderPath(NULL, CSIDL_DESKTOPDIRECTORY, NULL, SHGFP_TYPE_CURRENT, filePath);
+	if (SUCCEEDED(hr)) {
+		std::wstring fileName = std::wstring(filePath) + L"\\_activeScreen_funproject_renjith.txt";
+
+		std::ifstream file(fileName.c_str());
+		if (!file.good()) {
+			std::wofstream outputfile(fileName);
+			outputfile.close();
+		}
+		ShellExecute(0, L"open", fileName.c_str(), L"", L"", SW_SHOW);
+	}
+}
+
 
 void SendKeysToNotePad(int iSleep) {
 
 	UINT i, character_count, keystrokes_to_send, keystrokes_sent;
-	//HWND notepad;
-
-	//Get the handle of the Notepad window.
-	//notepad = FindWindow("Notepad", NULL);
-	//if (notepad == NULL) {
-	//	return;
-	//}
 
 	HWND hwndWindowTarget;
-	HWND hwndWindowNotepad = FindWindow(NULL, L"Untitled - Notepad");
+	HWND hwndWindowNotepad = FindWindow(L"Notepad", L"_activeScreen_funproject_renjith.txt - Notepad");
 	if (hwndWindowNotepad == NULL) {
-		ShellExecute(0, L"open", L"notepad.exe", L"", 0, SW_SHOW);
+		CreateOrOpenNotepadFile();
+		return;
 	}
 
-	//// Find the target Edit window within Notepad.
-	//hwndWindowTarget = FindWindowEx(hwndWindowNotepad, NULL, "Edit", NULL);
-	//if (hwndWindowTarget)
-	//{
-	//}
+	if (IsIconic(hwndWindowNotepad)) {
+		ShowWindow(hwndWindowNotepad, SW_RESTORE);
+	}
 
 	std::string strWord = "";
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<> dis(0, alphabet.size() - 1);
+
 	for (int i = 0; i < 10; i++) {
 		//Fill in the array of keystrokes to send.
-		strWord += alphabet[rand() % 67];
+		char c = alphabet[dis(gen)];
+		strWord += c;
 	}
 
 	character_count = strWord.length();
@@ -92,12 +99,12 @@ void SendKeysToNotePad(int iSleep) {
 		keystroke[i * 2 + 1].ki.dwExtraInfo = GetMessageExtraInfo();
 	}
 
-	//Send the keystrokes.
-		//Bring the Notepad window to the front.
+	//Bring the Notepad window to the front.
 	if (!SetForegroundWindow(hwndWindowNotepad)) {
 		delete[] keystroke;
 		return;
 	}
+	//Send the keystrokes.
 	keystrokes_sent = SendInput((UINT)keystrokes_to_send, keystroke, sizeof(*keystroke));
 
 	//return keystrokes_sent == keystrokes_to_send;
@@ -121,7 +128,7 @@ int main(/*int argc, char* argv[]*/)
 	std::cout << "how many seconds of dealy you need between action (20 and above only)? ";
 	std::cin >> iSleep;
 	if (iSleep < 20) iSleep = 20;
-
+	
 	iSleep *= 1000;
 	system("cls");
 
@@ -134,8 +141,9 @@ int main(/*int argc, char* argv[]*/)
 	GetWindowRect(hWndConsole, &rect);
 	MoveWindow(hWndConsole, rect.left, rect.top, 1000, 300, TRUE); // new dimension
 	::ShowWindow(::GetConsoleWindow(), SW_HIDE);
-	for (int i = 0; i < 50000; i++) {
-		//while (TRUE) {
+
+
+	while (TRUE) {
 		std::thread thread_Mouse = std::thread(MoveMouseandLeftClick, bLeftClick, iSleep);
 		std::thread thread_Keys = std::thread(SendKeysToNotePad, iSleep);
 
