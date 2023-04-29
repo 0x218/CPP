@@ -8,108 +8,154 @@
 #include <random>
 #include <thread>
 
+
 std::string alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,;'\"!@#$%^&*(){}[]\|~`?><-_+= ";
 
+HWND hwndWindowNotepad = NULL;
+TCHAR filePath[MAX_PATH];
+HRESULT hr = SHGetFolderPath(NULL, CSIDL_DESKTOPDIRECTORY, NULL, SHGFP_TYPE_CURRENT, filePath);
+std::wstring fileName = std::wstring(filePath) + L"\\_activeScreen_funproject_renjith.txt";
+std::wstring windowTitle = L"_activeScreen_funproject_renjith.txt - Notepad";
+
+
 void MoveMouseandLeftClick(bool leftClick, int iSleep) {
-	double screenWidth = ::GetSystemMetrics(SM_CXSCREEN) - 1;
-	double screenHeight = ::GetSystemMetrics(SM_CYSCREEN) - 1;
-	int iW, iH = 0;
+	while (true) {
+		double screenWidth = ::GetSystemMetrics(SM_CXSCREEN) - 1;
+		double screenHeight = ::GetSystemMetrics(SM_CYSCREEN) - 1;
+		int iW, iH = 0;
 
-	std::random_device rand; // obtain a random number from hardware
-	std::mt19937 generator(rand()); // seed the generator
+		std::random_device rand; // obtain a random number from hardware
+		std::mt19937 generator(rand()); // seed the generator
 
-	// define the range
-	std::uniform_int_distribution<> distScreenWidth(10, screenWidth);
-	std::uniform_int_distribution<> distScreenHeight(10, screenHeight);
+		// define the range
+		std::uniform_int_distribution<> distScreenWidth(10, screenWidth);
+		std::uniform_int_distribution<> distScreenHeight(10, screenHeight);
 
-	iW = distScreenWidth(generator); // generate numbers
-	iH = distScreenHeight(generator);
-	//std::cout << "Mouse position (R x C) " << iW << " x " << iH << std::endl;
-	SetCursorPos(iW, iH);
+		iW = distScreenWidth(generator); // generate numbers
+		iH = distScreenHeight(generator);
+		//std::cout << "Mouse position (R x C) " << iW << " x " << iH << std::endl;
+		SetCursorPos(iW, iH);
 
-	if (leftClick) {
-		//mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-		mouse_event(MOUSEEVENTF_RIGHTDOWN | MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
+		if (leftClick) {
+			//mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+			mouse_event(MOUSEEVENTF_RIGHTDOWN | MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
+		}
+		Sleep(iSleep);
 	}
-	Sleep(iSleep);
 }
 
 
-void CreateOrOpenNotepadFile() {
-	//creates a notepad file in desktop.
-	TCHAR filePath[MAX_PATH];
-	HRESULT hr = SHGetFolderPath(NULL, CSIDL_DESKTOPDIRECTORY, NULL, SHGFP_TYPE_CURRENT, filePath);
-	if (SUCCEEDED(hr)) {
-		std::wstring fileName = std::wstring(filePath) + L"\\_activeScreen_funproject_renjith.txt";
-
+void CreateNotepadFile() {
+	//if file note presents, creates a notepad file.	
+	if (SUCCEEDED(hr)) {		
 		std::ifstream file(fileName.c_str());
 		if (!file.good()) {
 			std::wofstream outputfile(fileName);
 			outputfile.close();
+			Sleep(500);
 		}
-		ShellExecute(0, L"open", fileName.c_str(), L"", L"", SW_SHOW);
 	}
 }
 
+void OpenNotepadFile() {
+	ShellExecute(0, L"open", fileName.c_str(), L"", L"", SW_SHOW);
+	Sleep(500);
+	hwndWindowNotepad = FindWindow(nullptr, windowTitle.c_str());
+}
 
-void SendKeysToNotePad(int iSleep) {
 
-	UINT i, character_count, keystrokes_to_send, keystrokes_sent;
+HWND MakeWindowActive() {
+	Sleep(500);
 
-	HWND hwndWindowTarget;
-	HWND hwndWindowNotepad = FindWindow(L"Notepad", L"_activeScreen_funproject_renjith.txt - Notepad");
 	if (hwndWindowNotepad == NULL) {
-		CreateOrOpenNotepadFile();
-		return;
+		hwndWindowNotepad = FindWindow(nullptr, windowTitle.c_str());
+	}
+
+	if (hwndWindowNotepad == NULL){
+		//MessageBox(nullptr, L"SendKeysToNotePad - concerning situtation!", L"ERROR", MB_OK | MB_ICONERROR);
+		OpenNotepadFile();
+		hwndWindowNotepad = FindWindow(nullptr, windowTitle.c_str());
+	}
+
+	if (hwndWindowNotepad == NULL) {
+		//MessageBox(nullptr, L"SendKeysToNotePad - critical situtation!", L"ERROR", MB_OK | MB_ICONERROR);
+		CreateNotepadFile();
+		OpenNotepadFile();
+		hwndWindowNotepad = FindWindow(nullptr, windowTitle.c_str());
+	}
+
+	if (hwndWindowNotepad == NULL) {
+		MessageBox(nullptr, L"Creation or activating a file has failed.  Aborting.", L"ERROR", MB_OK | MB_ICONERROR);
+		abort();
 	}
 
 	if (IsIconic(hwndWindowNotepad)) {
 		ShowWindow(hwndWindowNotepad, SW_RESTORE);
+		Sleep(500);
 	}
 
-	std::string strWord = "";
-	std::random_device rd;
-	std::mt19937 gen(rd());
-	std::uniform_int_distribution<> dis(0, alphabet.size() - 1);
-
-	for (int i = 0; i < 10; i++) {
-		//Fill in the array of keystrokes to send.
-		char c = alphabet[dis(gen)];
-		strWord += c;
-	}
-
-	character_count = strWord.length();
-
-	keystrokes_to_send = character_count * 2;
-	INPUT* keystroke = new INPUT[keystrokes_to_send];
-	for (i = 0; i < character_count; ++i)
-	{
-		keystroke[i * 2].type = INPUT_KEYBOARD;
-		keystroke[i * 2].ki.wVk = 0;
-		keystroke[i * 2].ki.wScan = strWord[i];
-		keystroke[i * 2].ki.dwFlags = KEYEVENTF_UNICODE;
-		keystroke[i * 2].ki.time = 0;
-		keystroke[i * 2].ki.dwExtraInfo = GetMessageExtraInfo();
-
-		keystroke[i * 2 + 1].type = INPUT_KEYBOARD;
-		keystroke[i * 2 + 1].ki.wVk = 0;
-		keystroke[i * 2 + 1].ki.wScan = strWord[i];
-		keystroke[i * 2 + 1].ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
-		keystroke[i * 2 + 1].ki.time = 0;
-		keystroke[i * 2 + 1].ki.dwExtraInfo = GetMessageExtraInfo();
-	}
-
-	//Bring the Notepad window to the front.
-	if (!SetForegroundWindow(hwndWindowNotepad)) {
-		delete[] keystroke;
-		return;
-	}
-	//Send the keystrokes.
-	keystrokes_sent = SendInput((UINT)keystrokes_to_send, keystroke, sizeof(*keystroke));
-
-	//return keystrokes_sent == keystrokes_to_send;
-	Sleep(iSleep);
+	SetForegroundWindow(hwndWindowNotepad);
+	Sleep(500);
+	
+	return hwndWindowNotepad;
 }
+
+void SendKeysToNotePad(int iSleep) {
+
+	while (true) {
+		UINT i, character_count, keystrokes_to_send, keystrokes_sent;
+
+		Sleep(500);
+		HWND hwndWindowNotepad = MakeWindowActive();
+		
+		if (hwndWindowNotepad != NULL) {		
+			std::string strWord = "";
+			std::random_device rd;
+			std::mt19937 gen(rd());
+			std::uniform_int_distribution<> dis(0, alphabet.size() - 1);
+
+			for (int i = 0; i < 10; i++) {
+				//Fill in the array of keystrokes to send.
+				char c = alphabet[dis(gen)];
+				strWord += c;
+			}
+
+			character_count = strWord.length();
+
+			keystrokes_to_send = character_count * 2;
+			INPUT* keystroke = new INPUT[keystrokes_to_send];
+			for (i = 0; i < character_count; ++i)
+			{
+				keystroke[i * 2].type = INPUT_KEYBOARD;
+				keystroke[i * 2].ki.wVk = 0;
+				keystroke[i * 2].ki.wScan = strWord[i];
+				keystroke[i * 2].ki.dwFlags = KEYEVENTF_UNICODE;
+				keystroke[i * 2].ki.time = 0;
+				keystroke[i * 2].ki.dwExtraInfo = GetMessageExtraInfo();
+
+				keystroke[i * 2 + 1].type = INPUT_KEYBOARD;
+				keystroke[i * 2 + 1].ki.wVk = 0;
+				keystroke[i * 2 + 1].ki.wScan = strWord[i];
+				keystroke[i * 2 + 1].ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
+				keystroke[i * 2 + 1].ki.time = 0;
+				keystroke[i * 2 + 1].ki.dwExtraInfo = GetMessageExtraInfo();
+			}
+
+			////Bring the Notepad window to the front.
+			//if (!SetForegroundWindow(hwndWindowNotepad)) {
+			//	delete[] keystroke;
+			//	return;
+			//}
+			//Send the keystrokes.
+			keystrokes_sent = SendInput((UINT)keystrokes_to_send, keystroke, sizeof(*keystroke));
+
+			//return keystrokes_sent == keystrokes_to_send;
+			delete[] keystroke;
+		}
+		Sleep(iSleep);
+	}
+}
+
 
 int main(/*int argc, char* argv[]*/)
 {
@@ -143,13 +189,14 @@ int main(/*int argc, char* argv[]*/)
 	::ShowWindow(::GetConsoleWindow(), SW_HIDE);
 
 
-	while (TRUE) {
-		std::thread thread_Mouse = std::thread(MoveMouseandLeftClick, bLeftClick, iSleep);
-		std::thread thread_Keys = std::thread(SendKeysToNotePad, iSleep);
+	std::thread thread_Mouse;
+	std::thread thread_Keys;
+	
+	thread_Keys = std::thread(SendKeysToNotePad, iSleep);
+	thread_Mouse = std::thread(MoveMouseandLeftClick, bLeftClick, iSleep);
 
-		thread_Keys.join();
-		thread_Mouse.join();
-	}
+	thread_Keys.join();
+	thread_Mouse.join();	
 
 	return 0;
 }
